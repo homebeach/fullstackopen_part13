@@ -40,14 +40,30 @@ router.delete('/:id', blogFinder, async (req, res) => {
   res.status(204).end();
 });
 
-// PUT /api/blogs/:id: Update a blog by ID
 router.put('/:id', blogFinder, async (req, res) => {
-  if (req.blog) {
-    req.blog.likes = req.body.likes; // Example: updating the 'likes' field
+  if (!req.blog) {
+    return res.status(404).json({ error: 'Blog not found' });
+  }
+
+  try {
+    // Check if only `likes` is being updated
+    if (req.body.likes !== undefined && Object.keys(req.body).length === 1) {
+      req.blog.likes = req.body.likes;
+      await req.blog.save();
+      return res.json({ likes: req.blog.likes }); // Return only the updated likes
+    }
+
+    // Update other fields if provided
+    Object.keys(req.body).forEach((key) => {
+      if (req.blog[key] !== undefined) {
+        req.blog[key] = req.body[key];
+      }
+    });
+
     await req.blog.save();
-    res.json(req.blog);
-  } else {
-    res.status(404).end();
+    res.json(req.blog); // Return the full blog object
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 
