@@ -3,67 +3,76 @@ const { Blog } = require('../models');
 
 // Middleware to find a blog by ID
 const blogFinder = async (req, res, next) => {
-  req.blog = await Blog.findByPk(req.params.id);
-  next();
+  try {
+    req.blog = await Blog.findByPk(req.params.id);
+    if (!req.blog) {
+      const error = new Error('Blog not found');
+      error.name = 'NotFoundError';
+      throw error;
+    }
+    next();
+  } catch (error) {
+    next(error); // Forward error to centralized error handler
+  }
 };
 
 // GET /api/blogs: List all blogs
-router.get('/', async (req, res) => {
-  const blogs = await Blog.findAll();
-  res.json(blogs);
-});
-
-// POST /api/blogs: Add a new blog
-router.post('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
   try {
-    const blog = await Blog.create(req.body);
-    res.status(201).json(blog);
+    const blogs = await Blog.findAll();
+    res.json(blogs);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 });
 
-// GET /api/blogs/:id: Fetch a single blog by ID
-router.get('/:id', blogFinder, async (req, res) => {
-  if (req.blog) {
-    res.json(req.blog);
-  } else {
-    res.status(404).end();
+// POST /api/blogs: Add a new blog
+router.post('/', async (req, res, next) => {
+  try {
+    const { author, title, url, likes } = req.body;
+
+    if (!title || !url) {
+      const error = new Error('Title and URL are required');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    const blog = await Blog.create({ author, title, url, likes: likes || 0 });
+    res.status(201).json(blog);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/blogs/:id: Update blog likes or other fields
+router.put('/:id', blogFinder, async (req, res, next) => {
+  try {
+    const { likes } = req.body;
+
+    if (likes !== undefined && typeof likes !== 'number') {
+      const error = new Error("'likes' must be a number");
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    if (likes !== undefined) {
+      req.blog.likes = likes;
+    }
+
+    await req.blog.save();
+    res.json(likes !== undefined ? { likes: req.blog.likes } : req.blog);
+  } catch (error) {
+    next(error);
   }
 });
 
 // DELETE /api/blogs/:id: Delete a blog by ID
-router.delete('/:id', blogFinder, async (req, res) => {
-  if (req.blog) {
-    await req.blog.destroy();
-  }
-  res.status(204).end();
-});
-
-router.put('/:id', blogFinder, async (req, res) => {
-  if (!req.blog) {
-    return res.status(404).json({ error: 'Blog not found' });
-  }
-
+router.delete('/:id', blogFinder, async (req, res, next) => {
   try {
-    // Check if only `likes` is being updated
-    if (req.body.likes !== undefined && Object.keys(req.body).length === 1) {
-      req.blog.likes = req.body.likes;
-      await req.blog.save();
-      return res.json({ likes: req.blog.likes }); // Return only the updated likes
-    }
-
-    // Update other fields if provided
-    Object.keys(req.body).forEach((key) => {
-      if (req.blog[key] !== undefined) {
-        req.blog[key] = req.body[key];
-      }
-    });
-
-    await req.blog.save();
-    res.json(req.blog); // Return the full blog object
+    await req.blog.destroy();
+    res.status(204).end();
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 });
 

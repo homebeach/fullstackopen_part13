@@ -1,20 +1,33 @@
-const express = require('express')
-const app = express()
+require('dotenv').config();
+require('express-async-errors'); // Automatically catches async errors
 
-const { PORT } = require('./util/config')
-const { connectToDatabase } = require('./util/db')
+const express = require('express');
+const app = express();
 
-const blogsRouter = require('./controllers/blogs')
+const { PORT } = require('./util/config');
+const { connectToDatabase } = require('./util/db');
 
-app.use(express.json())
+// Import the blogs router
+const blogsRouter = require('./controllers/blogs');
 
-app.use('/api/blogs', blogsRouter)
+// Import the centralized error handler middleware
+const errorHandler = require('./middleware/errorHandler');
 
+// Middleware for parsing JSON request bodies
+app.use(express.json());
+
+// Use the blogsRouter for API routes
+app.use('/api/blogs', blogsRouter);
+
+// Centralized error handling middleware
+app.use(errorHandler);
+
+// Start the application
 const start = async () => {
-  await connectToDatabase()
+  await connectToDatabase();
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
-  })
-}
+    console.log(`Server running on port ${PORT}`);
+  });
+};
 
-start()
+start();
