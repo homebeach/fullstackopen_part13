@@ -1,0 +1,2 @@
+fullstackopen-part13-thrumming-mountain-8183
+DATABASE_URL=postgres://fullstackopen_part13_thrumming_mountain_8183:NReJLebDEOPWjGK@fullstackopen-part13-database.flycast:5432/fullstackopen_part13_thrumming_mountain_8183?sslmode=disable
