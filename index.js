@@ -9,6 +9,8 @@ const { connectToDatabase } = require('./util/db');
 
 // Import the blogs router
 const blogsRouter = require('./controllers/blogs');
+const usersRouter = require('./controllers/users');
+const loginRouter = require('./controllers/login');
 
 // Import the centralized error handler middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -18,6 +20,8 @@ app.use(express.json());
 
 // Use the blogsRouter for API routes
 app.use('/api/blogs', blogsRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/login', loginRouter);
 
 // Centralized error handling middleware
 app.use(errorHandler);

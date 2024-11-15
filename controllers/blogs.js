@@ -1,5 +1,23 @@
 const router = require('express').Router();
 const { Blog } = require('../models');
+const jwt = require('jsonwebtoken');
+const { SECRET } = require('../util/config');
+
+const tokenExtractor = (req, res, next) => {
+  const authorization = req.get('authorization')
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    try {
+      console.log(authorization.substring(7));
+      req.decodedToken = jwt.verify(authorization.substring(7), SECRET);
+    } catch (error){
+      console.log(error)
+      return res.status(401).json({ error: 'token invalid' });
+    }
+  } else {
+    return res.status(401).json({ error: 'token missing' });
+  }
+  next();
+}
 
 // Middleware to find a blog by ID
 const blogFinder = async (req, res, next) => {
@@ -19,7 +37,13 @@ const blogFinder = async (req, res, next) => {
 // GET /api/blogs: List all blogs
 router.get('/', async (req, res, next) => {
   try {
-    const blogs = await Blog.findAll();
+    const blogs = await Blog.findAll({
+      attributes: { exclude: ['userId'] },
+      include: {
+        model: User,
+        attributes: ['name']
+      }
+    });
     res.json(blogs);
   } catch (error) {
     next(error);
@@ -36,8 +60,10 @@ router.post('/', async (req, res, next) => {
       error.name = 'ValidationError';
       throw error;
     }
+    const user = await User.findByPk(req.decodedToken.id)
 
-    const blog = await Blog.create({ author, title, url, likes: likes || 0 });
+
+    const blog = await Blog.create({ author, title, url, likes: likes || 0, userId: user.id, date: new Date() });
     res.status(201).json(blog);
   } catch (error) {
     next(error);
