@@ -21,13 +21,18 @@ const blogFinder = async (req, res, next) => {
   }
 };
 
-// GET /api/blogs: List all blogs or filter by search keyword
+// GET /api/blogs: List all blogs or filter by search keyword in title or author
 router.get('/', async (req, res, next) => {
   try {
     const { search } = req.query; // Extract search query parameter
 
     const whereClause = search
-      ? { title: { [Op.iLike]: `%${search}%` } } // Case-insensitive search for keyword in title
+      ? {
+          [Op.or]: [
+            { title: { [Op.iLike]: `%${search}%` } }, // Case-insensitive match in title
+            { author: { [Op.iLike]: `%${search}%` } }, // Case-insensitive match in author
+          ],
+        }
       : {}; // No filtering if search is not provided
 
     const blogs = await Blog.findAll({
