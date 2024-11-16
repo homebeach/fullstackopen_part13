@@ -85,9 +85,14 @@ router.put('/:id', blogFinder, async (req, res, next) => {
   }
 });
 
-// DELETE /api/blogs/:id: Delete a blog by ID
-router.delete('/:id', blogFinder, async (req, res, next) => {
+router.delete('/:id', tokenExtractor, blogFinder, async (req, res, next) => {
   try {
+    // Ensure the user trying to delete the blog is the one who created it
+    if (req.blog.userId !== req.decodedToken.id) {
+      return res.status(403).json({ error: 'You can only delete your own blogs' });
+    }
+
+    // Delete the blog if the user is the owner
     await req.blog.destroy();
     res.status(204).end();
   } catch (error) {
