@@ -21,7 +21,7 @@ const blogFinder = async (req, res, next) => {
   }
 };
 
-// GET /api/blogs: List all blogs or filter by search keyword in title or author
+// GET /api/blogs: List all blogs or filter by search keyword in title or author, ordered by likes descending
 router.get('/', async (req, res, next) => {
   try {
     const { search } = req.query; // Extract search query parameter
@@ -41,6 +41,7 @@ router.get('/', async (req, res, next) => {
         model: User,
         attributes: ['username', 'name'], // Include user data
       },
+      order: [['likes', 'DESC']], // Order by likes in descending order
     });
 
     res.json(blogs);
