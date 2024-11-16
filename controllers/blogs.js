@@ -20,7 +20,7 @@ const blogFinder = async (req, res, next) => {
   }
 };
 
-// GET /api/blogs: List all blogs
+// GET /api/blogs: List all blogs, each showing the user who added it
 router.get('/', async (req, res, next) => {
   try {
     const blogs = await Blog.findAll({

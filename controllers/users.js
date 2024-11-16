@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { User } = require('../models');
+const { User, Blog } = require('../models');
 
 // Middleware to find a user by username
 const userFinder = async (req, res, next) => {
@@ -16,15 +16,21 @@ const userFinder = async (req, res, next) => {
   }
 };
 
-// GET /api/users: List all users
+// GET /api/users: List all users, each showing the blogs they have added
 router.get('/', async (req, res, next) => {
   try {
-    const users = await User.findAll();
+    const users = await User.findAll({
+      include: {
+        model: Blog,
+        attributes: ['title', 'author', 'url', 'likes'],
+      },
+    });
     res.json(users);
   } catch (error) {
     next(error);
   }
 });
+
 
 // POST /api/users: Add a new user
 router.post('/', async (req, res, next) => {
