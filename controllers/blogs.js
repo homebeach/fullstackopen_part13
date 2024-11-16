@@ -1,23 +1,9 @@
 const router = require('express').Router();
-const { Blog } = require('../models');
+const { Blog, User } = require('../models');
 const jwt = require('jsonwebtoken');
 const { SECRET } = require('../util/config');
 
-const tokenExtractor = (req, res, next) => {
-  const authorization = req.get('authorization')
-  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
-    try {
-      console.log(authorization.substring(7));
-      req.decodedToken = jwt.verify(authorization.substring(7), SECRET);
-    } catch (error){
-      console.log(error)
-      return res.status(401).json({ error: 'token invalid' });
-    }
-  } else {
-    return res.status(401).json({ error: 'token missing' });
-  }
-  next();
-}
+const tokenExtractor = require('../middleware/tokenExtractor');
 
 // Middleware to find a blog by ID
 const blogFinder = async (req, res, next) => {
@@ -38,11 +24,10 @@ const blogFinder = async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const blogs = await Blog.findAll({
-      attributes: { exclude: ['userId'] },
       include: {
         model: User,
-        attributes: ['name']
-      }
+        attributes: ['username', 'name'],
+      },
     });
     res.json(blogs);
   } catch (error) {
@@ -51,19 +36,27 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST /api/blogs: Add a new blog
-router.post('/', async (req, res, next) => {
+router.post('/', tokenExtractor, async (req, res, next) => {
   try {
     const { author, title, url, likes } = req.body;
 
     if (!title || !url) {
-      const error = new Error('Title and URL are required');
-      error.name = 'ValidationError';
-      throw error;
+      return res.status(400).json({ error: 'Title and URL are required' });
     }
-    const user = await User.findByPk(req.decodedToken.id)
 
+    const user = await User.findByPk(req.decodedToken.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-    const blog = await Blog.create({ author, title, url, likes: likes || 0, userId: user.id, date: new Date() });
+    const blog = await Blog.create({
+      author,
+      title,
+      url,
+      likes: likes || 0,
+      userId: user.id,
+    });
+
     res.status(201).json(blog);
   } catch (error) {
     next(error);
