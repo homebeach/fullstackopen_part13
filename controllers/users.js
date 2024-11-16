@@ -1,34 +1,66 @@
-const router = require('express').Router()
+const router = require('express').Router();
+const { User } = require('../models');
 
-const { User } = require('../models')
-
-router.get('/', async (req, res) => {
-
-  const users = await User.findAll({
-    include: {
-      model: Note,
-      attributes: { exclude: ['userId'] }
-    }
-  })
-  res.json(users)
-})
-
-router.post('/', async (req, res) => {
+// Middleware to find a user by username
+const userFinder = async (req, res, next) => {
   try {
-    const user = await User.create(req.body)
-    res.json(user)
-  } catch(error) {
-    return res.status(400).json({ error })
+    req.user = await User.findOne({ where: { username: req.params.username } });
+    if (!req.user) {
+      const error = new Error('User not found');
+      error.name = 'NotFoundError';
+      throw error;
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
-})
+};
 
-router.get('/:id', async (req, res) => {
-  const user = await User.findByPk(req.params.id)
-  if (user) {
-    res.json(user)
-  } else {
-    res.status(404).end()
+// GET /api/users: List all users
+router.get('/', async (req, res, next) => {
+  try {
+    const users = await User.findAll();
+    res.json(users);
+  } catch (error) {
+    next(error);
   }
-})
+});
 
-module.exports = router
+// POST /api/users: Add a new user
+router.post('/', async (req, res, next) => {
+  try {
+    const { username, name } = req.body;
+
+    if (!username || !name) {
+      const error = new Error('Username and name are required');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    const user = await User.create({ username, name });
+    res.status(201).json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/users/:username: Change username
+router.put('/:username', userFinder, async (req, res, next) => {
+  try {
+    const { newUsername } = req.body;
+
+    if (!newUsername) {
+      const error = new Error('New username is required');
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    req.user.username = newUsername;
+    await req.user.save();
+    res.json(req.user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
