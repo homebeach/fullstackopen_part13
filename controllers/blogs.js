@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { Blog, User } = require('../models');
 const jwt = require('jsonwebtoken');
 const { SECRET } = require('../util/config');
+const { Op } = require('sequelize'); // Import Sequelize operators
 
 const tokenExtractor = require('../middleware/tokenExtractor');
 
@@ -20,15 +21,23 @@ const blogFinder = async (req, res, next) => {
   }
 };
 
-// GET /api/blogs: List all blogs, each showing the user who added it
+// GET /api/blogs: List all blogs or filter by search keyword
 router.get('/', async (req, res, next) => {
   try {
+    const { search } = req.query; // Extract search query parameter
+
+    const whereClause = search
+      ? { title: { [Op.iLike]: `%${search}%` } } // Case-insensitive search for keyword in title
+      : {}; // No filtering if search is not provided
+
     const blogs = await Blog.findAll({
+      where: whereClause, // Apply filtering condition
       include: {
         model: User,
-        attributes: ['username', 'name'],
+        attributes: ['username', 'name'], // Include user data
       },
     });
+
     res.json(blogs);
   } catch (error) {
     next(error);
