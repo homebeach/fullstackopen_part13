@@ -53,10 +53,15 @@ router.get('/', async (req, res, next) => {
 // POST /api/blogs: Add a new blog
 router.post('/', tokenExtractor, async (req, res, next) => {
   try {
-    const { author, title, url, likes } = req.body;
+    const { author, title, url, likes, year } = req.body;
 
     if (!title || !url) {
       return res.status(400).json({ error: 'Title and URL are required' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (year && (year < 1991 || year > currentYear)) {
+      return res.status(400).json({ error: `Year must be between 1991 and ${currentYear}` });
     }
 
     const user = await User.findByPk(req.decodedToken.id);
@@ -69,6 +74,7 @@ router.post('/', tokenExtractor, async (req, res, next) => {
       title,
       url,
       likes: likes || 0,
+      year: year || currentYear,
       userId: user.id,
     });
 
