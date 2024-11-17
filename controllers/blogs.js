@@ -75,7 +75,7 @@ router.post('/', tokenExtractor, async (req, res, next) => {
       url,
       likes: likes || 0,
       year: year || currentYear,
-      userId: user.id,
+      user_id: user.id,
     });
 
     res.status(201).json(blog);

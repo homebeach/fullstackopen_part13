@@ -31,6 +31,33 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id, {
+      include: {
+        model: Blog,
+        as: 'blogs', // Default alias for the relationship
+        attributes: ['id', 'url', 'title', 'author', 'likes', 'year'], // Specify attributes to return
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Return the user's data along with their reading list
+    const userData = {
+      name: user.name,
+      username: user.username,
+      readings: user.blogs, // The user's reading list (blogs they've added)
+    };
+
+    res.json(userData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while fetching user data' });
+  }
+});
 
 // POST /api/users: Add a new user
 router.post('/', async (req, res, next) => {

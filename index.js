@@ -11,7 +11,7 @@ const blogsRouter = require('./controllers/blogs');
 const usersRouter = require('./controllers/users');
 const authorsRouter = require('./controllers/authors');
 const loginRouter = require('./controllers/login');
-
+const readingListRouter = require('./controllers/readingList');
 
 // Import the centralized error handler middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -23,6 +23,8 @@ app.use('/api/blogs', blogsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/authors', authorsRouter);
 app.use('/api/login', loginRouter);
+app.use('/api/readinglists', readingListRouter);
+
 
 // Centralized error handling middleware
 app.use(errorHandler);
