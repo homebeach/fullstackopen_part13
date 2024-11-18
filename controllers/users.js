@@ -1,15 +1,14 @@
 const router = require('express').Router();
 const { User, Blog, ReadingList } = require('../models');
 
-// Middleware to find a user by username
-const userFinder = async (req, res, next) => {
+// Middleware to find a user by ID
+const userFinderById = async (req, res, next) => {
   try {
-    req.user = await User.findOne({ where: { username: req.params.username } });
-    if (!req.user) {
-      const error = new Error('User not found');
-      error.name = 'NotFoundError';
-      throw error;
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+    req.user = user; // Attach the user to the request
     next();
   } catch (error) {
     next(error);
@@ -31,28 +30,35 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+// GET /api/users/:id: Get a user's reading list with optional filters
+router.get('/:id', userFinderById, async (req, res, next) => {
+  const { read } = req.query; // Extract query parameter
+
   try {
-    const user = await User.findByPk(req.params.id, {
+    // Filter condition for the query
+    const readFilter =
+      read === undefined
+        ? {} // No filter if the query parameter is not provided
+        : { read: read === 'true' }; // Convert "read" to boolean if provided
+
+    // Fetch the user's reading list with the optional read filter
+    const userWithReadingList = await User.findByPk(req.params.id, {
       include: {
         model: Blog,
         as: 'readingList', // Match the alias defined in the association
         attributes: ['id', 'url', 'title', 'author', 'likes', 'year'], // Blog attributes
         through: {
           attributes: ['read', 'id'], // Attributes from the join table (ReadingList)
+          where: readFilter, // Apply the read filter
         },
       },
     });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Format the user's data along with their reading list
+    // Format the response
     const userData = {
-      name: user.name,
-      username: user.username,
-      readings: user.readingList.map(blog => ({
+      name: req.user.name,
+      username: req.user.username,
+      readings: userWithReadingList.readingList.map(blog => ({
         id: blog.id,
         url: blog.url,
         title: blog.title,
@@ -70,8 +76,7 @@ router.get('/:id', async (req, res) => {
 
     res.json(userData);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while fetching user data' });
+    next(error);
   }
 });
 
@@ -94,7 +99,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // PUT /api/users/:username: Change username
-router.put('/:username', userFinder, async (req, res, next) => {
+router.put('/:username', async (req, res, next) => {
   try {
     const { newUsername } = req.body;
 
@@ -104,9 +109,16 @@ router.put('/:username', userFinder, async (req, res, next) => {
       throw error;
     }
 
-    req.user.username = newUsername;
-    await req.user.save();
-    res.json(req.user);
+    const user = await User.findOne({ where: { username: req.params.username } });
+    if (!user) {
+      const error = new Error('User not found');
+      error.name = 'NotFoundError';
+      throw error;
+    }
+
+    user.username = newUsername;
+    await user.save();
+    res.json(user);
   } catch (error) {
     next(error);
   }
