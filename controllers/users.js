@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { User, Blog, ReadingList } = require('../models');
+const { User, Blog } = require('../models');
 
 // Middleware to find a user by ID
 const userFinderById = async (req, res, next) => {

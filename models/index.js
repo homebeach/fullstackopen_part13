@@ -1,6 +1,7 @@
 const Blog = require('./blog');
 const User = require('./user');
 const ReadingList = require('./readingList'); // Import the ReadingList model
+const Session = require('./session'); // Import the ReadingList model
 
 // User to Blog (One-to-Many)
 User.hasMany(Blog, { foreignKey: 'user_id' });
@@ -25,4 +26,5 @@ module.exports = {
   Blog,
   User,
   ReadingList,
+  Session
 };

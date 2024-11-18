@@ -63,18 +63,13 @@ router.post('/', tokenExtractor, async (req, res, next) => {
       return res.status(400).json({ error: `Year must be between 1991 and ${currentYear}` });
     }
 
-    const user = await User.findByPk(req.decodedToken.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
     const blog = await Blog.create({
       author,
       title,
       url,
       likes: likes || 0,
       year: year || currentYear,
-      user_id: user.id,
+      user_id: req.user.id, // Use req.user.id from middleware
     });
 
     res.status(201).json(blog);
