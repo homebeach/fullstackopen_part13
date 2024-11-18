@@ -3,7 +3,6 @@ const { Blog, User } = require('../models');
 const jwt = require('jsonwebtoken');
 const { SECRET } = require('../util/config');
 const { Op } = require('sequelize'); // Import Sequelize operators
-
 const tokenExtractor = require('../middleware/tokenExtractor');
 
 // Middleware to find a blog by ID
