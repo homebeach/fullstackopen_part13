@@ -26,9 +26,10 @@ ReadingList.init(
   },
   {
     sequelize,
-    underscored: true,
+    underscored: true, // Use snake_case for database column names
     timestamps: true,
     modelName: 'reading_list',
+    tableName: 'reading_lists', // Ensure this matches the database table name
   }
 );
 

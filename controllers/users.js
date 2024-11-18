@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { User, Blog } = require('../models');
+const { User, Blog, ReadingList } = require('../models');
 
 // Middleware to find a user by username
 const userFinder = async (req, res, next) => {
@@ -36,8 +36,11 @@ router.get('/:id', async (req, res) => {
     const user = await User.findByPk(req.params.id, {
       include: {
         model: Blog,
-        as: 'blogs', // Default alias for the relationship
-        attributes: ['id', 'url', 'title', 'author', 'likes', 'year'], // Specify attributes to return
+        as: 'readingList', // Match the alias defined in the association
+        attributes: ['id', 'url', 'title', 'author', 'likes', 'year'], // Blog attributes
+        through: {
+          attributes: ['read', 'id'], // Attributes from the join table (ReadingList)
+        },
       },
     });
 
@@ -45,11 +48,24 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Return the user's data along with their reading list
+    // Format the user's data along with their reading list
     const userData = {
       name: user.name,
       username: user.username,
-      readings: user.blogs, // The user's reading list (blogs they've added)
+      readings: user.readingList.map(blog => ({
+        id: blog.id,
+        url: blog.url,
+        title: blog.title,
+        author: blog.author,
+        likes: blog.likes,
+        year: blog.year,
+        readinglists: [
+          {
+            read: blog.reading_list.read, // Access the 'read' field from the join table
+            id: blog.reading_list.id, // Access the ID from the join table
+          },
+        ],
+      })),
     };
 
     res.json(userData);
