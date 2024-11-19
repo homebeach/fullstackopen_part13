@@ -63,6 +63,7 @@ router.post('/', tokenExtractor, async (req, res, next) => {
       return res.status(400).json({ error: `Year must be between 1991 and ${currentYear}` });
     }
 
+    // At this point, tokenExtractor has validated the token, session, and user status.
     const blog = await Blog.create({
       author,
       title,
@@ -79,16 +80,23 @@ router.post('/', tokenExtractor, async (req, res, next) => {
 });
 
 // PUT /api/blogs/:id: Update blog likes or other fields
-router.put('/:id', blogFinder, async (req, res, next) => {
+router.put('/:id', tokenExtractor, blogFinder, async (req, res, next) => {
   try {
     const { likes } = req.body;
 
+    // Check if the user is disabled
+    if (req.user.disabled) {
+      return res.status(403).json({ error: 'User is disabled and cannot modify blogs.' });
+    }
+
+    // Validate 'likes' input
     if (likes !== undefined && typeof likes !== 'number') {
       const error = new Error("'likes' must be a number");
       error.name = 'ValidationError';
       throw error;
     }
 
+    // Update the likes or other fields in the blog
     if (likes !== undefined) {
       req.blog.likes = likes;
     }

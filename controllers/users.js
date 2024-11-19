@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { User, Blog } = require('../models');
+const tokenExtractor = require('../middleware/tokenExtractor');
 
 // Middleware to find a user by ID
 const userFinderById = async (req, res, next) => {
@@ -99,26 +100,30 @@ router.post('/', async (req, res, next) => {
 });
 
 // PUT /api/users/:username: Change username
-router.put('/:username', async (req, res, next) => {
+router.put('/:username', tokenExtractor, async (req, res, next) => {
   try {
     const { newUsername } = req.body;
 
+    // Validate the new username input
     if (!newUsername) {
-      const error = new Error('New username is required');
-      error.name = 'ValidationError';
-      throw error;
+      return res.status(400).json({ error: 'New username is required' });
     }
 
-    const user = await User.findOne({ where: { username: req.params.username } });
-    if (!user) {
-      const error = new Error('User not found');
-      error.name = 'NotFoundError';
-      throw error;
+    // Ensure the logged-in user matches the target username
+    if (req.user.username !== req.params.username) {
+      return res.status(403).json({ error: 'You can only change your own username' });
     }
 
-    user.username = newUsername;
-    await user.save();
-    res.json(user);
+    // Check if the user is disabled
+    if (req.user.disabled) {
+      return res.status(403).json({ error: 'Your account is disabled and cannot be modified' });
+    }
+
+    // Update the username
+    req.user.username = newUsername;
+    await req.user.save();
+
+    res.json({ message: 'Username updated successfully', user: req.user });
   } catch (error) {
     next(error);
   }

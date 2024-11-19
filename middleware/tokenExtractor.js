@@ -19,7 +19,7 @@ const tokenExtractor = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // Check if the user is disabled
+    // Check if the user exists and is active
     const user = await User.findByPk(decoded.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

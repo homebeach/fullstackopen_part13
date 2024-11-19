@@ -4,54 +4,51 @@ const { ReadingList, User, Blog } = require('../models'); // Import the models
 const router = express.Router();
 const tokenExtractor = require('../middleware/tokenExtractor');
 
-router.post('/', async (req, res) => {
-  const { blogId, userId } = req.body;
-
+router.post('/', tokenExtractor, async (req, res, next) => {
   try {
-    // Find the user and blog to ensure they exist
-    const user = await User.findByPk(userId);
+    const { blogId } = req.body;
+
+    // Check if the blog exists
     const blog = await Blog.findByPk(blogId);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
     if (!blog) {
       return res.status(404).json({ error: 'Blog not found' });
     }
 
-    // Manually create an entry in the ReadingList table
+    // The `tokenExtractor` middleware ensures `req.user` is attached and valid
+    const user = req.user;
+
+    // Check if the user's account is disabled
+    if (user.disabled) {
+      return res.status(403).json({ error: 'User is disabled and cannot add to the reading list.' });
+    }
+
+    // Create an entry in the ReadingList table
     await ReadingList.create({
-      user_id: userId,
+      user_id: user.id, // Use the authenticated user's ID
       blog_id: blogId,
-      read: false,  // Default to false since it's not read yet
+      read: false, // Default to false since it's not read yet
     });
 
     res.status(201).json({
-      message: `Blog with ID ${blogId} added to the reading list of User with ID ${userId}`,
+      message: `Blog with ID ${blogId} added to the reading list of User with ID ${user.id}`,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'An error occurred while adding to the reading list' });
+    next(error);
   }
 });
 
 // PUT /api/readinglists/:id - Mark a blog as read
 router.put('/:id', tokenExtractor, async (req, res, next) => {
-  const { id } = req.params; // ID of the ReadingList entry
-  const { read } = req.body; // New read status
+  const { id } = req.params;
+  const { read } = req.body;
 
-  // Validate the "read" field
   if (typeof read !== 'boolean') {
     return res.status(400).json({ error: 'Invalid read status. Must be a boolean.' });
   }
 
   try {
-    // Fetch the user based on the token
-    const user = await User.findByPk(req.decodedToken.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    // The `tokenExtractor` middleware already ensures the user exists and is not disabled.
+    const user = req.user;
 
     // Find the ReadingList entry by its ID
     const readingListEntry = await ReadingList.findByPk(id);
